@@ -1,48 +1,47 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-const Gym = require('../models/Gym');
+import jwt from 'jsonwebtoken';
+import User from '../models/User.js';
+import Gym from '../models/Gym.js';
 
 // Verify JWT token
-const authenticate = async (req, res, next) => {
+export const authenticate = async (req, res, next) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    
+    const authHeader = req.header('Authorization') || '';
+    const token = authHeader.replace('Bearer ', '').trim();
+
     if (!token) {
       return res.status(401).json({ message: 'Access denied. No token provided.' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).populate('gymId');
-    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+    const user = await User.findById(decoded.id).populate('gym');
+
     if (!user) {
       return res.status(401).json({ message: 'Invalid token.' });
     }
 
     req.user = user;
-    req.gymId = user.gymId._id;
+    req.gymId = user.gym?._id || null; // safer access
     next();
   } catch (error) {
-    res.status(401).json({ message: 'Invalid token.' });
+    return res.status(401).json({ message: 'Invalid token.', error: error.message });
   }
 };
 
-// Check user role
-const authorize = (...roles) => {
+// Check user role(s)
+export const authorize = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ 
-        message: 'Access denied. Insufficient permissions.' 
-      });
+      return res.status(403).json({ message: 'Access denied. Insufficient permissions.' });
     }
     next();
   };
 };
 
-// Multi-tenant data filtering
-const tenantFilter = (req, res, next) => {
-  // Add gymId filter to all queries
+// Multi-tenant data filtering middleware
+export const tenantFilter = (req, res, next) => {
+  if (!req.gymId) {
+    return res.status(400).json({ message: 'Gym context missing for tenant filtering.' });
+  }
   req.filter = { gymId: req.gymId };
   next();
 };
-
-module.exports = { authenticate, authorize, tenantFilter };

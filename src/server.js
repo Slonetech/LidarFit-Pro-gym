@@ -1,15 +1,17 @@
 console.log('Starting server...');
 
-try {
-  require('dotenv').config();
-  console.log('Dotenv loaded successfully');
-} catch (error) {
-  console.log('Dotenv not found, using default values');
-}
+import dotenv from 'dotenv';
+dotenv.config();
+console.log('Dotenv loaded successfully');
 
-const express = require('express');
-const mongoose = require('mongoose');
+import express from 'express';
+import mongoose from 'mongoose';
+
 console.log('Express and Mongoose loaded successfully');
+
+import authRoutes from './routes/auth.js';
+import Gym from './models/Gym.js';
+import User from './models/User.js';
 
 const app = express();
 
@@ -18,21 +20,20 @@ const connectDB = async () => {
   try {
     const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/lidarfit';
     const conn = await mongoose.connect(mongoURI);
-    console.log(` MongoDB Connected: ${conn.connection.host}`);
+    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
-    console.error(' Database connection error:', error.message);
-    console.log(' Continuing without database...');
+    console.error('❌ Database connection error:', error.message);
+    console.log('⚠️ Continuing without database...');
   }
 };
 
-// Connect to database
-connectDB();
+await connectDB();
 
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Test routes
+// Root route
 app.get('/', (req, res) => {
   res.json({ 
     message: 'LidarFit Pro Gym Management System API',
@@ -43,6 +44,7 @@ app.get('/', (req, res) => {
   });
 });
 
+// Test route
 app.get('/test', (req, res) => {
   res.json({ 
     message: 'Server is working!',
@@ -51,15 +53,12 @@ app.get('/test', (req, res) => {
   });
 });
 
-// Test database models
+// Test database collections
 app.get('/test-db', async (req, res) => {
   try {
     if (mongoose.connection.readyState !== 1) {
       return res.status(500).json({ error: 'Database not connected' });
     }
-    // Test collections
-    const Gym = require('./models/Gym');
-    const User = require('./models/User');
     const gymCount = await Gym.countDocuments();
     const userCount = await User.countDocuments();
     res.json({
@@ -75,18 +74,34 @@ app.get('/test-db', async (req, res) => {
   }
 });
 
-// API Routes
-console.log(' Loading auth routes...');
-app.use('/api/auth', require('./routes/auth'));
-console.log(' Auth routes mounted');
+// Create & list dummy users for testing
+app.get('/test-users', async (req, res) => {
+  try {
+    const newUser = new User({
+      name: 'Test User',
+      email: 'test@example.com',
+      password: '123456'
+    });
+    await newUser.save();
 
-// ADD THIS LINE - API Routes
+    const users = await User.find();
+    res.json({
+      message: 'Database test successful',
+      users
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database test failed', details: err.message });
+  }
+});
+
+// API Routes
 console.log('Loading auth routes...');
-app.use('/api/auth', require('./routes/auth'));
+app.use('/api/auth', authRoutes);
+console.log('Auth routes mounted');
 
 const PORT = process.env.PORT || 5000;
-
 app.listen(PORT, () => {
-  console.log(` Server running successfully on port ${PORT}`);
-  console.log(` Visit: http://localhost:5000`);
+  console.log(`🚀 Server running successfully on port ${PORT}`);
+  console.log(`🌐 Visit: http://localhost:${PORT}`);
 });

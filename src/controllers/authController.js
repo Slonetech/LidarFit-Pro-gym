@@ -1,62 +1,69 @@
-const jwt = require('jsonwebtoken');
-
-// Mock data store (replace with database later)
-let mockGyms = [];
-let mockUsers = [];
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
+import Gym from '../models/Gym.js';
+import User from '../models/User.js';
 
 // Generate JWT token
 const generateToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET || 'fallback-secret', { expiresIn: '30d' });
 };
 
-// Register new gym
-const registerGym = async (req, res) => {
+// Register new gym with hashed password and MongoDB
+export const registerGym = async (req, res) => {
   try {
-    const { gymName, gymEmail, adminEmail, adminPassword, adminFirstName, adminLastName } = req.body;
+    const {
+      gymName,
+      gymEmail,
+      phone,
+      address,
+      adminEmail,
+      adminPassword,
+      adminFirstName,
+      adminLastName
+    } = req.body;
 
-    console.log('Register gym request:', { gymName, gymEmail, adminEmail });
-
-    // Check if gym exists
-    const existingGym = mockGyms.find(gym => gym.email === gymEmail);
+    // Check if gym exists by email
+    const existingGym = await Gym.findOne({ email: gymEmail });
     if (existingGym) {
       return res.status(400).json({ message: 'Gym already exists' });
     }
 
-    // Create gym
-    const gym = {
-      id: Date.now().toString(),
+    // Create gym (including phone & address)
+    const gym = new Gym({
       name: gymName,
       email: gymEmail,
+      phone,
+      address,
       status: 'trial',
       createdAt: new Date()
-    };
-    mockGyms.push(gym);
+    });
+    await gym.save();
 
-    // Create admin user
-    const adminUser = {
-      id: Date.now().toString() + '_admin',
-      gymId: gym.id,
+    // Hash admin password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(adminPassword, saltRounds);
+
+    // Create admin user linked to gym
+    const adminUser = new User({
+      gym: gym._id,               // matches your schema field name
       email: adminEmail,
-      password: adminPassword,
-      role: 'gym_admin',
-      profile: {
-        firstName: adminFirstName,
-        lastName: adminLastName
-      },
+      password: hashedPassword,
+      role: 'admin',              // use a valid enum value from your schema
+      name: `${adminFirstName} ${adminLastName}`, // required field
       createdAt: new Date()
-    };
-    mockUsers.push(adminUser);
+    });
+    await adminUser.save();
 
-    const token = generateToken(adminUser.id);
+    const token = generateToken(adminUser._id);
 
     res.status(201).json({
       message: 'Gym and admin created successfully',
       token,
       user: {
-        id: adminUser.id,
+        id: adminUser._id,
         email: adminUser.email,
         role: adminUser.role,
-        gymId: gym.id,
+        gymId: gym._id,
         gymName: gym.name
       }
     });
@@ -66,30 +73,37 @@ const registerGym = async (req, res) => {
   }
 };
 
-// Login
-const login = async (req, res) => {
+// Login with email and password, compare hashed password
+export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    console.log('Login request:', { email });
-
-    const user = mockUsers.find(u => u.email === email && u.password === password);
+    // Find user by email
+    const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const gym = mockGyms.find(g => g.id === user.gymId);
-    const token = generateToken(user.id);
+    // Compare passwords
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Find gym for user
+    const gym = await Gym.findById(user.gym);
+
+    const token = generateToken(user._id);
 
     res.json({
       token,
       user: {
-        id: user.id,
+        id: user._id,
         email: user.email,
         role: user.role,
-        profile: user.profile,
-        gymId: user.gymId,
-        gymName: gym?.name
+        name: user.name,
+        gymId: user.gym,
+        gymName: gym ? gym.name : null
       }
     });
   } catch (error) {
@@ -98,21 +112,20 @@ const login = async (req, res) => {
   }
 };
 
-// Get stats
-const getStats = async (req, res) => {
-  console.log('Stats request received');
-  res.json({
-    message: 'Auth stats working!',
-    totalGyms: mockGyms.length,
-    totalUsers: mockUsers.length,
-    mockData: true,
-    gyms: mockGyms,
-    users: mockUsers.map(u => ({ id: u.id, email: u.email, role: u.role }))
-  });
-};
+// Get stats - total gyms and users count from DB
+export const getStats = async (req, res) => {
+  try {
+    const totalGyms = await Gym.countDocuments();
+    const totalUsers = await User.countDocuments();
 
-module.exports = {
-  registerGym,
-  login,
-  getStats
+    res.json({
+      message: 'Auth stats working!',
+      totalGyms,
+      totalUsers,
+      mockData: false
+    });
+  } catch (error) {
+    console.error('Stats error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
 };

@@ -1,28 +1,31 @@
-const express = require('express');
-const { registerGym, login, getStats } = require('../controllers/authController');
+console.log('Auth routes module loaded');
+
+import express from 'express';
+import { registerGym, login, getStats } from '../controllers/authController.js';
 
 const router = express.Router();
 
-console.log(' Auth routes module loaded');
+router.post('/register', (req, res, next) => {
+  console.log('Register route hit');
+  next();
+}, registerGym);
 
-// @route   GET /api/auth/stats
-router.get('/stats', (req, res) => {
-  console.log(' Stats route called');
-  getStats(req, res);
+router.post('/login', (req, res, next) => {
+  console.log('Login route hit');
+  next();
+}, login);
+
+router.get('/stats', (req, res, next) => {
+  console.log('Stats route hit');
+  next();
+}, getStats);
+
+// Add this test route
+router.get('/hello', (req, res) => {
+  console.log('Hello route hit');
+  res.json({ message: 'Hello from auth router!' });
 });
 
-// @route   POST /api/auth/register-gym
-router.post('/register-gym', (req, res) => {
-  console.log('🏋️ Register gym route called');
-  registerGym(req, res);
-});
+console.log('Auth routes configured');
 
-// @route   POST /api/auth/login
-router.post('/login', (req, res) => {
-  console.log(' Login route called');
-  login(req, res);
-});
-
-console.log(' Auth routes configured');
-
-module.exports = router;
+export default router;
