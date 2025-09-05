@@ -6,6 +6,7 @@ console.log('Dotenv loaded successfully');
 
 import express from 'express';
 import mongoose from 'mongoose';
+import cors from 'cors';
 
 console.log('Express and Mongoose loaded successfully');
 
@@ -24,15 +25,33 @@ import User from './models/User.js';
 
 const app = express();
 
+// CORS configuration (must be before any routes)
+const isProduction = process.env.NODE_ENV === 'production';
+const allowedOrigins = (process.env.FRONTEND_ORIGIN ? process.env.FRONTEND_ORIGIN.split(',') : ['http://localhost:3000']).map((o) => o.trim());
+
+const corsOptions = isProduction
+  ? {
+      origin: allowedOrigins,
+      credentials: true
+    }
+  : {
+      // In development, reflect the request origin to simplify local testing
+      origin: (origin, callback) => callback(null, true),
+      credentials: true
+    };
+
+app.use(cors(corsOptions));
+
 // Database connection
 const connectDB = async () => {
   try {
     const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/lidarfit';
+    console.log(`🔌 Attempting MongoDB connection using MONGODB_URI: ${mongoURI}`);
     const conn = await mongoose.connect(mongoURI);
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+    console.log(`✅ MongoDB connected successfully: ${conn.connection.host}`);
   } catch (error) {
-    console.error('❌ Database connection error:', error.message);
-    console.log('⚠️ Continuing without database...');
+    console.error('❌ MongoDB connection error:', error.message);
+    console.log('⚠️ Continuing without database (some features may not work)');
   }
 };
 

@@ -1,5 +1,7 @@
 import React from 'react';
 import { Navigate, Outlet, createBrowserRouter } from 'react-router-dom';
+import { AuthProvider } from '../context/AuthContext';
+import { Toaster } from 'react-hot-toast';
 import AdminLayout from '../layouts/AdminLayout';
 import StaffLayout from '../layouts/StaffLayout';
 import CustomerLayout from '../layouts/CustomerLayout';
@@ -31,60 +33,75 @@ const getUserRole = (): Role => {
 export const router = createBrowserRouter([
   {
     path: '/',
-    element: (() => {
-      const role = getUserRole();
-      if (role === 'admin') return <Navigate to="/admin" replace />;
-      if (role === 'staff') return <Navigate to="/staff" replace />;
-      if (role === 'customer') return <Navigate to="/customer" replace />;
-      return <Navigate to="/auth/login" replace />;
-    })()
-  },
-  {
-    path: '/auth',
-    element: <AuthLayout />,
-    children: [
-      { path: 'login', element: <Login /> },
-      { path: 'register', element: <Register /> }
-    ]
-  },
-  {
-    path: '/admin',
-    element: (<ProtectedRoute allowed={['admin']} />),
+    element: (
+      <AuthProvider>
+        <Toaster position="top-right" />
+        <Outlet />
+      </AuthProvider>
+    ),
     children: [
       {
-        element: <AdminLayout />,
+        index: true,
+        element: (() => {
+          const role = getUserRole();
+          if (role === 'admin') return <Navigate to="/admin" replace />;
+          if (role === 'staff') return <Navigate to="/staff" replace />;
+          if (role === 'customer') return <Navigate to="/customer" replace />;
+          return <Navigate to="/auth/login" replace />;
+        })()
+      },
+      {
+        path: 'auth',
+        element: <AuthLayout />,
         children: [
-          { path: '', element: <AdminDashboard /> },
-          { path: 'users', element: <AdminUsers /> },
-          { path: 'packages', element: <AdminPackages /> }
+          { path: 'login', element: <Login /> },
+          { path: 'register', element: <Register /> }
         ]
-      }
-    ]
-  },
-  {
-    path: '/staff',
-    element: (<ProtectedRoute allowed={['admin', 'staff']} />),
-    children: [
+      },
       {
-        element: <StaffLayout />,
+        path: 'admin',
+        element: (<ProtectedRoute allowed={['admin']} />),
         children: [
-          { path: '', element: <StaffDashboard /> }
+          {
+            element: <AdminLayout />,
+            children: [
+              { index: true, element: <AdminDashboard /> },
+              { path: 'users', element: <AdminUsers /> },
+              { path: 'packages', element: <AdminPackages /> }
+            ]
+          }
         ]
-      }
-    ]
-  },
-  {
-    path: '/customer',
-    element: (<ProtectedRoute allowed={['customer', 'admin', 'staff']} />),
-    children: [
+      },
       {
-        element: <CustomerLayout />,
+        path: 'staff',
+        element: (<ProtectedRoute allowed={['admin', 'staff']} />),
         children: [
-          { path: '', element: <CustomerDashboard /> }
+          {
+            element: <StaffLayout />,
+            children: [
+              { index: true, element: <StaffDashboard /> }
+            ]
+          }
+        ]
+      },
+      {
+        path: 'customer',
+        element: (<ProtectedRoute allowed={['customer', 'admin', 'staff']} />),
+        children: [
+          {
+            element: <CustomerLayout />,
+            children: [
+              { index: true, element: <CustomerDashboard /> }
+            ]
+          }
         ]
       }
     ]
   }
-]);
+], {
+  future: {
+    v7_startTransition: true
+  }
+});
 
 
