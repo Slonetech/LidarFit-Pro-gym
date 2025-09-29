@@ -1,6 +1,7 @@
 {
   "name": "lidarfit-frontend",
   "version": "1.0.0",
+  "type": "module",
   "description": "LidarFit Pro Gym Management System - Frontend React App",
   "private": true,
   "dependencies": {

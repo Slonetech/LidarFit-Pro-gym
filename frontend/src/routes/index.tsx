@@ -28,7 +28,15 @@ const getUserRole = (): Role => {
   }
 };
 
-// Note: Runtime protection is handled by ProtectedRoute using AuthContext.
+// Placeholder component for pages that don't exist yet
+const ComingSoon: React.FC<{ title: string }> = ({ title }) => (
+  <div className="flex items-center justify-center h-full">
+    <div className="text-center">
+      <h1 className="text-3xl font-bold text-gray-800 mb-4">{title}</h1>
+      <p className="text-gray-600">This page is under construction</p>
+    </div>
+  </div>
+);
 
 export const router = createBrowserRouter([
   {
@@ -67,7 +75,13 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <AdminDashboard /> },
               { path: 'users', element: <AdminUsers /> },
-              { path: 'packages', element: <AdminPackages /> }
+              { path: 'packages', element: <AdminPackages /> },
+              { path: 'equipment', element: <ComingSoon title="Equipment Management" /> },
+              { path: 'payments', element: <ComingSoon title="Payments" /> },
+              { path: 'announcements', element: <ComingSoon title="Announcements" /> },
+              { path: 'attendance', element: <ComingSoon title="Attendance" /> },
+              { path: 'reports', element: <ComingSoon title="Reports" /> },
+              { path: 'settings', element: <ComingSoon title="Settings" /> }
             ]
           }
         ]
@@ -79,7 +93,11 @@ export const router = createBrowserRouter([
           {
             element: <StaffLayout />,
             children: [
-              { index: true, element: <StaffDashboard /> }
+              { index: true, element: <StaffDashboard /> },
+              { path: 'customers', element: <ComingSoon title="Customer Management" /> },
+              { path: 'attendance', element: <ComingSoon title="Attendance" /> },
+              { path: 'todos', element: <ComingSoon title="Tasks" /> },
+              { path: 'payments', element: <ComingSoon title="Payments" /> }
             ]
           }
         ]
@@ -91,7 +109,12 @@ export const router = createBrowserRouter([
           {
             element: <CustomerLayout />,
             children: [
-              { index: true, element: <CustomerDashboard /> }
+              { index: true, element: <CustomerDashboard /> },
+              { path: 'membership', element: <ComingSoon title="My Membership" /> },
+              { path: 'attendance', element: <ComingSoon title="My Attendance" /> },
+              { path: 'todos', element: <ComingSoon title="My Tasks" /> },
+              { path: 'payments', element: <ComingSoon title="Payment History" /> },
+              { path: 'progress', element: <ComingSoon title="My Progress" /> }
             ]
           }
         ]
@@ -103,5 +126,3 @@ export const router = createBrowserRouter([
     v7_startTransition: true
   }
 });
-
-
